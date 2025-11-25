@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import mqtt from 'mqtt';
+import { supabase } from '@/lib/supabase';
 
 export interface SensorData {
   state: 'open' | 'close' | null;
@@ -13,6 +14,13 @@ export interface SensorData {
   vibration: number | null;
   online: boolean;
 }
+
+// Configuración por defecto (fallback)
+const DEFAULT_CONFIG = {
+  broker: 'ws://broker.hivemq.com:8000/mqtt',
+  topic: 'shellies/upvina/shellydw2-7DCA66/#',
+  deviceId: 'shellydw2-7DCA66',
+};
 
 export function useMQTT() {
   const [sensorData, setSensorData] = useState<SensorData>({
@@ -28,27 +36,78 @@ export function useMQTT() {
   
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [config, setConfig] = useState<typeof DEFAULT_CONFIG | null>(null);
+  const [configLoaded, setConfigLoaded] = useState(false);
 
+  // Cargar configuración desde Supabase (solo una vez)
   useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('devices')
+          .select('*')
+          .eq('device_id', DEFAULT_CONFIG.deviceId)
+          .single();
+
+        if (error) throw error;
+
+        if (data) {
+          const mqttBroker = data.mqtt_broker || 'broker.hivemq.com';
+          const mqttTopic = data.mqtt_topic || DEFAULT_CONFIG.topic.replace('/#', '');
+          
+          const newConfig = {
+            broker: `ws://${mqttBroker}:8000/mqtt`,
+            topic: `${mqttTopic}/#`,
+            deviceId: data.device_id,
+          };
+          
+          setConfig(newConfig);
+          console.log('⚙️ Configuración cargada desde BD:', {
+            broker: mqttBroker,
+            topic: mqttTopic,
+          });
+        } else {
+          setConfig(DEFAULT_CONFIG);
+        }
+      } catch (err) {
+        console.warn('⚠️ Error cargando config, usando valores por defecto:', err);
+        setConfig(DEFAULT_CONFIG);
+      } finally {
+        setConfigLoaded(true);
+      }
+    };
+
+    loadConfig();
+  }, []); // Solo ejecutar una vez
+
+  // Conectar al MQTT solo cuando la configuración esté lista
+  useEffect(() => {
+    if (!configLoaded || !config) {
+      console.log('⏳ Esperando configuración...');
+      return;
+    }
+
+    console.log('🔌 Iniciando conexión MQTT con:', config);
+
     // Conectar al broker MQTT vía WebSockets (para navegador)
-    const client = mqtt.connect('ws://broker.hivemq.com:8000/mqtt', {
+    const client = mqtt.connect(config.broker, {
       clientId: `digital-twin-${Math.random().toString(16).slice(2, 10)}`,
       clean: true,
       reconnectPeriod: 5000,
     });
 
     client.on('connect', () => {
-      console.log('✅ Conectado a MQTT broker');
+      console.log('✅ Conectado a MQTT broker:', config.broker);
       setConnected(true);
       setError(null);
       
       // Suscribirse al topic del Shelly DW2
-      client.subscribe('shellies/upvina/shellydw2-7DCA66/#', (err) => {
+      client.subscribe(config.topic, (err) => {
         if (err) {
-          console.error('Error suscribiendo:', err);
+          console.error('❌ Error suscribiendo:', err);
           setError('Error al suscribirse al topic');
         } else {
-          console.log('📡 Suscrito a: shellies/upvina/shellydw2-7DCA66/#');
+          console.log('📡 Suscrito correctamente a:', config.topic);
         }
       });
     });
@@ -98,10 +157,11 @@ export function useMQTT() {
 
     // Cleanup
     return () => {
+      console.log('🔌 Desconectando cliente MQTT...');
       client.end();
     };
-  }, []);
+  }, [configLoaded, config]); // Reconectar solo cuando config esté lista
 
-  return { sensorData, connected, error };
+  return { sensorData, connected, error, config: config || DEFAULT_CONFIG };
 }
 
