@@ -15,9 +15,22 @@ export interface SensorData {
   online: boolean;
 }
 
+// Función helper para construir URL MQTT
+const getMqttUrl = (broker: string) => {
+  // En producción (HTTPS), usar WSS. En desarrollo (HTTP), usar WS
+  const isSecure = typeof window !== 'undefined' && window.location.protocol === 'https:';
+  const protocol = isSecure ? 'wss' : 'ws';
+  const port = isSecure ? '8884' : '8000'; // HiveMQ usa 8884 para WSS y 8000 para WS
+  
+  // Si el broker ya incluye protocolo, extraer solo el host
+  const host = broker.replace(/^(ws|wss):\/\//, '').split(':')[0];
+  
+  return `${protocol}://${host}:${port}/mqtt`;
+};
+
 // Configuración por defecto (fallback)
 const DEFAULT_CONFIG = {
-  broker: 'ws://broker.hivemq.com:8000/mqtt',
+  broker: 'broker.hivemq.com',
   topic: 'shellies/upvina/shellydw2-7DCA66/#',
   deviceId: 'shellydw2-7DCA66',
 };
@@ -52,11 +65,11 @@ export function useMQTT() {
         if (error) throw error;
 
         if (data) {
-          const mqttBroker = data.mqtt_broker || 'broker.hivemq.com';
+          const mqttBroker = data.mqtt_broker || DEFAULT_CONFIG.broker;
           const mqttTopic = data.mqtt_topic || DEFAULT_CONFIG.topic.replace('/#', '');
           
           const newConfig = {
-            broker: `ws://${mqttBroker}:8000/mqtt`,
+            broker: mqttBroker,
             topic: `${mqttTopic}/#`,
             deviceId: data.device_id,
           };
@@ -87,17 +100,22 @@ export function useMQTT() {
       return;
     }
 
-    console.log('🔌 Iniciando conexión MQTT con:', config);
+    const brokerUrl = getMqttUrl(config.broker);
+    console.log('🔌 Iniciando conexión MQTT:', {
+      broker: config.broker,
+      url: brokerUrl,
+      topic: config.topic,
+    });
 
     // Conectar al broker MQTT vía WebSockets (para navegador)
-    const client = mqtt.connect(config.broker, {
+    const client = mqtt.connect(brokerUrl, {
       clientId: `digital-twin-${Math.random().toString(16).slice(2, 10)}`,
       clean: true,
       reconnectPeriod: 5000,
     });
 
     client.on('connect', () => {
-      console.log('✅ Conectado a MQTT broker:', config.broker);
+      console.log('✅ Conectado a MQTT broker:', brokerUrl);
       setConnected(true);
       setError(null);
       
