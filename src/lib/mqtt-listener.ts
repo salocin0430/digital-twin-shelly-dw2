@@ -67,11 +67,22 @@ export async function startMQTTListener() {
     console.log(`   Broker: ${broker}`);
     console.log(`   Topic: ${topicBase}`);
 
-    // Conectar a MQTT (TCP en servidor, no WebSocket)
-    mqttClient = mqtt.connect(`mqtt://${broker}:1883`, {
+    // Determinar protocolo según variable de entorno
+    // Si MQTT_USE_TCP=true, usar TCP (para servidores dedicados)
+    // Si no existe o es false, usar WSS (para Vercel/serverless)
+    const useTCP = process.env.MQTT_USE_TCP === 'true';
+    const brokerUrl = useTCP 
+      ? `mqtt://${broker}:1883`        // TCP - Servidores dedicados
+      : `wss://${broker}:8884/mqtt`;   // WSS - Vercel/Serverless
+    
+    console.log(`   Protocolo: ${useTCP ? 'TCP' : 'WebSocket Secure (WSS)'}`);
+    console.log(`   URL: ${brokerUrl}`);
+    
+    mqttClient = mqtt.connect(brokerUrl, {
       clientId: `server-listener-${Math.random().toString(16).slice(2, 10)}`,
       clean: true,
       reconnectPeriod: 5000,
+      connectTimeout: 10000, // 10 segundos de timeout
     });
 
     mqttClient.on('connect', () => {
