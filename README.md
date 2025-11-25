@@ -1,33 +1,78 @@
 # 🏠 Gemelo Digital - Shelly DW2
 
-Visualización 3D en tiempo real del sensor **Shelly Door/Window 2** usando React Three Fiber y MQTT.
+Visualización 3D en tiempo real del sensor **Shelly Door/Window 2** usando React Three Fiber, MQTT y Supabase.
 
 ## ✨ Características
 
-- 🎨 **Escena 3D Interactiva**: Puerta animada que se abre/cierra en tiempo real
-- 📡 **Conexión MQTT**: Recibe datos en vivo del sensor Shelly DW2
-- 💡 **Iluminación Reactiva**: La luz de la escena varía según el nivel de lux del sensor
-- 📊 **HUD con Glassmorphism**: Panel elegante mostrando estado, temperatura, batería, etc.
-- 🎮 **Controles de Cámara**: Rotar, zoom y pan para explorar la escena
-- 🔄 **Animaciones Suaves**: Interpolación fluida para movimientos naturales
+### 🎨 **Gemelo Digital 3D**
+- Escena 3D interactiva con puerta animada en tiempo real
+- Iluminación reactiva según nivel de lux del sensor
+- HUD elegante con glassmorphism mostrando datos en vivo
+- Controles de cámara (rotar, zoom, pan)
+- Animaciones suaves y fluidas
+- 📱 **100% Responsive** (móvil, tablet, desktop)
+
+### 📊 **Dashboard de Métricas**
+- Gráfica de temperatura (24h)
+- Gráfica de batería (7 días)
+- Gráfica de iluminación (24h)
+- KPIs en tiempo real (aperturas, batería, temperatura)
+- Tabla de eventos históricos
+- Estado actual prominente (ABIERTO/CERRADO)
+- Actualización en tiempo real vía MQTT
+
+### 🗄️ **Persistencia de Datos**
+- Base de datos PostgreSQL (Supabase)
+- Almacenamiento de lecturas históricas
+- Configuración de dispositivos
+- Backend listener 24/7 para guardar datos automáticamente
+- Carga de último estado al iniciar
+
+### 🔐 **Autenticación**
+- Sistema de login simple
+- Rutas protegidas
+- Credenciales configurables
+
+### ⚙️ **Configuración Dinámica**
+- Editor de configuración de dispositivos
+- Control del listener MQTT del servidor
+- Actualización en tiempo real de broker/topic
 
 ## 🚀 Inicio Rápido
 
 ### 1. Instalar dependencias
 
 ```bash
+cd digital-twin
 npm install
 ```
 
-### 2. Ejecutar el servidor de desarrollo
+### 2. Configurar Supabase
+
+Crea un archivo `.env.local` con tus credenciales de Supabase:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=tu-supabase-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-supabase-anon-key
+NEXT_PUBLIC_ADMIN_EMAIL=admin@digitaltwin.local
+NEXT_PUBLIC_ADMIN_PASSWORD=shelly2024
+```
+
+Ver instrucciones detalladas en [`SUPABASE_SETUP.md`](./SUPABASE_SETUP.md)
+
+### 3. Ejecutar el servidor de desarrollo
 
 ```bash
 npm run dev
 ```
 
-### 3. Abrir en el navegador
+### 4. Abrir en el navegador
 
 Visita [http://localhost:3000](http://localhost:3000)
+
+**Credenciales de login:**
+- Email: `admin@digitaltwin.local`
+- Password: `shelly2024`
 
 ## 📡 Configuración MQTT
 
@@ -129,32 +174,53 @@ python publicar_test.py
 - **Animaciones**: Framer Motion
 - **Lenguaje**: TypeScript
 
+## 🚢 Despliegue en Vercel
+
+El proyecto está listo para producción. Ver instrucciones completas en [`DEPLOYMENT.md`](./DEPLOYMENT.md)
+
+```bash
+# Verificar que el build funciona
+npm run build
+
+# Desplegar en Vercel
+vercel --prod
+```
+
+**Variables de entorno requeridas en Vercel:**
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_ADMIN_EMAIL`
+- `NEXT_PUBLIC_ADMIN_PASSWORD`
+
 ## 🔧 Solución de Problemas
 
 ### No se conecta a MQTT
-
 - Verifica tu conexión a internet
 - Algunos firewalls corporativos bloquean WebSockets
-- Prueba con otro broker: `ws://test.mosquitto.org:8080/mqtt`
+- Ve a `/config` y verifica el broker configurado
 
 ### No recibo datos del sensor
-
 - Verifica que el Shelly esté online
-- Confirma que MQTT esté habilitado en la configuración
+- Confirma que MQTT esté habilitado en la configuración del Shelly
 - Abre/cierra el sensor para forzar el envío de datos
 - Usa MQTT Explorer para verificar que los mensajes llegan al broker
+- Ve a `/config` e inicia el **Listener del Servidor**
+
+### Dashboard no muestra datos
+- Verifica que hay datos en Supabase (ve a la tabla `sensor_readings`)
+- Inicia el listener del servidor en `/config`
+- Abre/cierra el sensor para generar datos
+- O ejecuta el simulador: `python3 simular_sensor.py`
 
 ### La escena 3D no carga
-
 - Verifica que tu navegador soporte WebGL
 - Prueba en Chrome/Edge (mejor compatibilidad con Three.js)
 - Abre la consola del navegador para ver errores
+- Limpia caché y recarga (Cmd+Shift+R / Ctrl+Shift+R)
 
-### Rendimiento lento
-
-- Reduce la calidad de sombras en `Scene.tsx`
-- Limita el framerate con `frameloop="demand"` en Canvas
-- Desactiva `OrbitControls` si no los necesitas
+### Error "Missing Supabase environment variables"
+- Verifica que `.env.local` existe y tiene las variables correctas
+- Reinicia el servidor de desarrollo después de crear `.env.local`
 
 ## 📚 Recursos
 
@@ -162,21 +228,37 @@ python publicar_test.py
 - [Three.js Docs](https://threejs.org/docs/)
 - [Shelly API Docs](https://shelly-api-docs.shelly.cloud/gen1/#shelly-door-window-1-2)
 - [MQTT.js](https://github.com/mqttjs/MQTT.js)
+- [Supabase Docs](https://supabase.com/docs)
+- [Next.js Docs](https://nextjs.org/docs)
+- [Vercel Deployment](https://vercel.com/docs)
 
 ## 👨‍💻 Autor
 
 Nicolás Ruiz - UPV - INA
 
+## ✅ Estado del Proyecto
+
+- [x] Gemelo 3D interactivo
+- [x] Conexión MQTT en tiempo real
+- [x] Dashboard de métricas
+- [x] Persistencia en Supabase
+- [x] Autenticación
+- [x] Backend listener 24/7
+- [x] Responsive design completo
+- [x] Build optimizado para producción
+- [x] Listo para Vercel
+
 ## 🎯 Próximas Mejoras
 
-- [ ] Gráficos históricos de temperatura/batería
-- [ ] Alertas visuales cuando batería baja
-- [ ] Sonidos cuando la puerta se abre
-- [ ] Múltiples vistas de cámara predefinidas
-- [ ] Modo VR/AR
-- [ ] Exportar datos a CSV
-- [ ] Dashboard con múltiples sensores
+- [ ] Alertas push cuando la puerta se abre
+- [ ] Exportar datos históricos a CSV
+- [ ] Soporte para múltiples sensores
+- [ ] Dashboard analytics avanzado
+- [ ] Modo oscuro/claro
+- [ ] Notificaciones de batería baja
+- [ ] Integración con Alexa/Google Home
+- [ ] API REST para terceros
 
 ## 📝 Licencia
 
-Proyecto académico - UPV
+Proyecto académico - Universidad Politécnica de Valencia (UPV)

@@ -54,9 +54,9 @@ export function LuxChart({ data }: LuxChartProps) {
   };
 
   // Calcular min y max para el dominio
-  const luxValues = chartData.map(d => d.lux);
-  const minLux = Math.min(...luxValues);
-  const maxLux = Math.max(...luxValues);
+  const luxValues = chartData.map(d => d.lux).filter((v): v is number => v !== null);
+  const minLux = luxValues.length > 0 ? Math.min(...luxValues) : 0;
+  const maxLux = luxValues.length > 0 ? Math.max(...luxValues) : 100;
   const padding = (maxLux - minLux) * 0.1 || 10;
 
   return (

@@ -30,7 +30,7 @@ export interface SensorReading {
   battery: number | null;
   temperature: number | null;
   lux: number | null;
-  illumination: 'dark' | 'bright' | null;
+  illumination: string | null; // 'dark' | 'twilight' | 'bright' | etc.
   tilt: number | null;
   vibration: number | null;
   online: boolean;
